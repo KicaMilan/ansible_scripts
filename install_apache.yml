@@ -1,0 +1,11 @@
+---
+
+- name: Install apache server service
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: install apache2 package
+      dnf:
+        name: httpd
