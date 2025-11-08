@@ -1,11 +1,18 @@
 ---
 
-- name: Install apache server service
+- name: Install httpd server service
   hosts: all
   become: true
 
   tasks:
 
-    - name: install apache2 package
+    - name: install httpd package
       dnf:
         name: httpd
+        state: present
+
+    - name: Ensure httpd service is started and enabled
+      systemd:
+        name: httpd
+        state: started
+        enabled: true

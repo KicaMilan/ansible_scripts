@@ -1,0 +1,11 @@
+---
+
+- name: Removing httpd server service from nodes
+  hosts: all
+  become: true
+  tasks:
+
+    - name: remove httpd service
+      dnf:
+        name: httpd
+        state: absent
