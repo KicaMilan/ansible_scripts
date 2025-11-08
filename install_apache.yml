@@ -6,13 +6,23 @@
 
   tasks:
 
+    - name: update repository insdex
+      dnf:
+        update_cache: yes
+
+      when: ansible_distribution == "CentOS"
+          
+
     - name: install httpd package
       dnf:
         name: httpd
         state: present
+      
+      when: ansible_distribution == "CentOS"
 
     - name: Ensure httpd service is started and enabled
       systemd:
         name: httpd
         state: started
         enabled: true
+      when: ansible_distribution == "CentOS"
