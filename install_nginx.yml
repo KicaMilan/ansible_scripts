@@ -1,0 +1,43 @@
+---
+- name: Instalacija Nginx servera na Rocky Linux 9
+  hosts: web_server
+  become: true
+  vars:
+    nginx_repo_file: "/etc/yum.repos.d/nginx.repo"
+
+  tasks:
+
+    - name: Installing dependencies
+      dnf:
+        name:
+          - epel-release
+          - dnf-utils
+        state: present
+        
+
+    - name: Dodavanje nginx zvaničnog repozitorijuma
+      ansible.builtin.copy:
+        dest: "{{ nginx_repo_file }}"
+        content: |
+          [nginx-stable]
+          name=nginx stable repo
+          baseurl=https://nginx.org/packages/centos/8/$basearch/
+          gpgcheck=1
+          enabled=1
+          gpgkey=https://nginx.org/keys/nginx_signing.key
+      register: nginx_repo
+
+    - name: Osvježavanje repozitorijuma
+      dnf:
+        update_cache: true
+      when: nginx_repo.changed
+
+    - name: Instalacija nginx paketa
+      dnf:
+        name: nginx
+        state: present
+    - name: Provera da li je nginx servis aktivan
+      systemd:
+        name: nginx
+        state: started
+        enabled: true
