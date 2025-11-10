@@ -2,8 +2,12 @@
 
 
 - name: Install httpd an php package
-  hosts: web01
+  hosts: web_server
   become: true
+
+  vars: 
+    httpd_package: httpd
+    php_package: php
   tasks:
 
     - name: Install
