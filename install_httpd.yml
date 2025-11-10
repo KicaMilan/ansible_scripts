@@ -1,0 +1,15 @@
+---
+
+
+- name: Install httpd an php package
+  hosts: web01
+  become: true
+  tasks:
+
+    - name: Install
+      dnf:
+        name:
+          - "{{ httpd_package }}"
+          - "{{ php_package }}"
+        state: latest
+        update_cache: yes
