@@ -1,0 +1,34 @@
+---
+
+- name: Install httpd server service
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: install updates (CentOS)
+      dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+
+
+- hosts: web_server
+  become: true
+  tasks:
+
+    - name: install httpd package
+      dnf:
+        name: 
+          - httpd
+          - php
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: Ensure httpd service is started and enabled
+      systemd:
+        name: httpd
+        state: started
+        enabled: true
+      when: ansible_distribution == "CentOS"
