@@ -11,7 +11,7 @@
   tasks:
 
     - name: Install
-      dnf:
+      package:
         name:
           - "{{ httpd_package }}"
           - "{{ php_package }}"
