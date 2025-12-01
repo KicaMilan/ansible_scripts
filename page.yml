@@ -1,0 +1,73 @@
+---
+
+- name: Install apache server service and PostgreSQL database
+  hosts: all
+  become: true
+  pre_tasks:
+
+    - name: install updates (CentOS)
+      dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+    - name: install updates (Ubuntu)
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+- hosts: web_server
+  become: true
+  tasks:
+
+    - name: install apache package
+      apt:
+        name: 
+          - apache2
+          - libapache2-mod-php
+        state: latest
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Ensure httpd service is started and enabled
+      systemd:
+        name: apache2
+        state: started
+        enabled: true
+      when: ansible_distribution == "Ubuntu"
+
+
+- hosts: db_server
+  become: true
+  tasks:
+    - name: Configure RPM repository
+      dnf:
+        name:  https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        state: present
+
+    - name: Install POstgreSQL 16  Server 
+      dnf:
+        name: postgresql16-server
+        state: present
+
+    - name: Check if database is initialized
+      stat:
+        path: /var/lib/pgsql/16/data/pg_hba.conf
+      register: result
+        
+    - name: Initialize the database
+      shell: /usr/pgsql-16/bin/postgresql-16-setup initdb
+      when: not result.stat.exists
+
+    - name: Start the database service
+      service:
+        name: postgresql-16
+        state: started
+
+
+    - name: Allow POstgreSQL database service
+      firewalld:
+        service: postgresql
+        permanent: yes
+        state: enabled
+
