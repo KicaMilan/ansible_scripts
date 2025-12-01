@@ -16,7 +16,7 @@
     tags: always
     authorized_key:
       user: ansible
-      key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDRqbbTkIEZf9VBUvP2HY2iiaQ1URJ8djliQyFXKKlEV0+O1nVHzz3WBcqdl4wMGwOAi2nn6G7v/9+bE+vnnF0+N2V8a9kVSZ/EFvWC87xn1aocpP/paslPlNqkO4xW9MsWlGWRVo479h/MD4EoQ1g00hxSekcFLkj0uPFk7oFL1Q== ansible"
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBq9TihQ6pNdH3LVc7RQUm2PLXABHKnvZExnhKu9vY2/ ansible"
 
   - name: add sudoers file to user
     tags: always
