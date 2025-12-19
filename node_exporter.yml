@@ -1,0 +1,77 @@
+---
+- name: Install Node Exporter on Ubuntu & CentOS
+  hosts: all
+  become: yes
+
+  vars:
+    node_exporter_version: "1.10.2"
+    node_exporter_user: "node_exporter"
+    node_exporter_download_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+
+  tasks:
+    - name: Install required packages (Ubuntu)
+      apt:
+        name: wget
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages (CentOS)
+      yum:
+        name: wget
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Create node_exporter user
+      user:
+        name: "{{ node_exporter_user }}"
+        shell: /usr/sbin/nologin
+        system: yes
+
+    - name: Download node exporter archive
+      get_url:
+        url: "{{ node_exporter_download_url }}"
+        dest: /tmp/node_exporter.tar.gz
+
+    - name: Extract node exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Move binary to /usr/local/bin
+      command:
+        src: mv /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter /usr/local/bin/node_exporter
+        args:
+          creates: /usr/local/bin/node_exporter
+
+    - name: Set permissions on binary
+      file:
+        path: /usr/local/bin/node_exporter
+        mode: "0755"
+
+    - name: Create systemd service file
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Prometheus Node Exporter
+          After=network.target
+
+          [Service]
+          User={{ node_exporter_user }}
+          ExecStart=/usr/local/bin/node_exporter
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Node Exporter
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes

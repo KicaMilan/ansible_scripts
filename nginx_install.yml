@@ -1,0 +1,64 @@
+---
+
+- name: Install nginx from repo
+  hosts: all
+  become: yes
+  vars: 
+    keyring_path: /usr/share/keyrings/nginx-archive-keyring.gpg
+    key_url: https://nginx.org/keys/nginx_signing.key
+
+  tasks:
+    - name: Instale prerequisites
+      apt:
+        name:
+          - curl
+          - gnupg2
+          - ca-certificates
+          - lsb-release
+          - ubuntu-keyring
+        state: present
+        update_cache: yes
+
+    - name: Downloading nginx singning key
+      ansible.builtin.get_url:
+        url: "{{ key_url }}"
+        dest: /tmp/nginx_signing.key
+        mode: '0644'
+
+
+    - name: Converting (dearmor) the key and placing it in a keyring
+      ansible.builtin.shell:
+        cmd: cat /tmp/nginx_signing.key | gpg --dearmor | tee {{ keyring_path }} > /dev/null
+        creates: "{{ keyring_path }}" # This step is skipped if the file already exists
+
+
+    - name: Adding the official Nginx repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by={{ keyring_path }}] https://nginx.org/packages/ubuntu {{ ansible_distribution_release }} nginx"
+        filename: nginx
+        state: present
+        update_cache: no # Cache will be updated during installation process
+
+
+    - name: Setting repository pinning (Package Priority)
+      ansible.builtin.copy:
+        dest: /etc/apt/preferences.d/99nginx
+        content: |
+          Package: *
+          Pin: origin nginx.org
+          Pin: release o=nginx
+          Pin-Priority: 900
+        mode: '0644'
+
+    - name: Installing nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+
+    - name: Osiguranje da je Nginx servis pokrenut i omogućen (start on boot)
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
