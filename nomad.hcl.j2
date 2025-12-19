@@ -1,0 +1,34 @@
+datacenter = "kicadc"
+data_dir = "/opt/nomad"
+bind_addr = "0.0.0.0"
+
+# --- NOVI DEO: ADVERTISE BLOK ---
+# Nomad mora znati koju adresu da javi ostalima
+advertise {
+  http = "{{ ansible_default_ipv4.address }}"
+  rpc  = "{{ ansible_default_ipv4.address }}"
+  serf = "{{ ansible_default_ipv4.address }}"
+}
+# --------------------------------
+
+# SERVER block
+server {
+  enabled = true
+  bootstrap_expect = 3
+}
+
+# CLIENT block
+client {
+  enabled = true
+}
+
+# Connecting with Consul
+consul {
+  address = "127.0.0.1:8500"
+}
+
+plugin "docker" {
+  config {
+    allow_privileged = true
+  }
+}

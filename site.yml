@@ -1,44 +1,84 @@
 ---
 
-- name: Install httpd server service
+- name: Instalacija HashiCorp Nomad i Consul Klastera
   hosts: all
-  become: true
-
-  pre_tasks:
-
-    - name: install updates (CentOS)
-      dnf:
-        update_only: yes
-        update_cache: yes
-      when: ansible_distribution == "CentOS"
-
-
-
-- hosts: web_server
-  become: true
+  become: yes
   tasks:
 
-    - name: install httpd package
-      dnf:
+    # 1. Priprema zavisnosti
+    - name: Instaliraj potrebne pakete
+      apt:
         name: 
-          - httpd
-          - php
-        state: latest
-      when: ansible_distribution == "CentOS"
+          - curl
+          - gnupg
+          - software-properties-common
+        state: present
+        update_cache: yes
 
-    - name: Ensure httpd service is started and enabled
-      systemd:
-        name: httpd
+     # 2. Dodavanje HashiCorp GPG kljuca i repozitorijuma
+    - name: Dodaj HashiCorp GPG key
+      shell: |
+        wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Dodaj HashiCorp repo
+      shell: |
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+      args:
+        creates: /etc/apt/sources.list.d/hashicorp.list
+
+    - name: Update apt cache nakon dodavanja repoa
+      apt:
+        update_cache: yes
+
+    
+    # 3. Instalacija Nomad i Consul
+    - name: Instaliraj Nomad i Consul
+      apt:
+        name:
+          - nomad
+          - consul
+        state: latest
+
+    # 4. Konfiguracija Consula
+    - name: Postavi Consul konfiguraciju
+      template:
+        src: /opt/nomad/consul.hcl.j2
+        dest: /etc/consul.d/consul.hcl
+        mode: '0644'
+      notify: Restart Consul
+
+    # 5. KOnfiguracija Nomada
+    - name: Postavi Nomad konfiguraciju
+      template:
+        src: /opt/nomad/nomad.hcl.j2
+        dest: /etc/nomad.d/nomad.hcl
+        mode: '0644'
+      notify: Restart Nomad
+
+    # 6. Pokretanje servisa
+    - name: Osiguraj da je Consul pokrenut i enable-ovan
+      service:
+        name: consul
         state: started
-        enabled: true
-      when: ansible_distribution == "CentOS"
+        enabled: yes
+    
+    - name: Osiguraj da je Nomad pokrenut i enable-ovan
+      service:
+        name: nomad
+        state: started
+        enabled: yes
+    
 
-
-- hosts: db_server
-  become: true
-  tasks:
-    - name: Install mariadb package
-      package:
-        name: mariadb-server
-        state: latest
-      when: ansible_distribution == "CentOS"
+    # Handlers - pokrecu se samo ako se config fajl promeni
+  handlers:
+    - name: Restart Consul
+      service:
+        name: consul
+        state: restarted
+   
+    - name: Restart Nomad
+      service:
+        name: nomad
+        state: restarted

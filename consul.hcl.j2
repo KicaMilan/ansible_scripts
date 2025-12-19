@@ -1,0 +1,19 @@
+datacenter = "kicadc"
+data_dir = "/opt/consul"
+bind_addr = "{{ ansible_default_ipv4.address }}"
+client_addr = "0.0.0.0"
+
+# Server role
+
+server = true
+bootstrap_expect = 3
+ui_config {
+  enabled = true
+}
+
+# Automatic connection with other nodes from the ansible group
+retry_join = [
+{% for host in play_hosts %}
+  "{{ host }}",
+{% endfor %}
+]
