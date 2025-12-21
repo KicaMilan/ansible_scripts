@@ -1,0 +1,74 @@
+---
+
+- name: Install docker containers on client and server nodes
+  hosts: all
+  become: true
+  vars: 
+    docker_packages:
+      - ca-certificates
+      - curl
+    docker_keyring_path: /etc/apt/keyrings/docker.asc
+
+  tasks:
+    - name: Ensure dependencies are installed
+      apt:
+        name: "{{ docker_packages  }}"
+        state: present
+        update_cache: yes
+
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker GPG key (as ASCII armored file)
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o {{ docker_keyring_path }}
+      args:
+        creates: "{{ docker_keyring_path }}"
+
+    - name: Set permission on Docker keyring
+      file:
+        path: "{{ docker_keyring_path }}"
+        mode: a+r
+
+    - name: Add Docker repository manually
+      ansible.builtin.shell: |
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+           https://download.docker.com/linux/ubuntu \
+           $( . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODNAME}" ) stable" | \
+           sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Update apt packages index
+      apt:
+        update_cache: yes
+
+    - name: Install Docker engine, CLI, containerd and plugins
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Enable and start docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name:  Verify Docker installation
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Show installed Docker version
+      debug:
+        msg: "Docker installed successfully: {{ docker_version.stdout }}"
+
