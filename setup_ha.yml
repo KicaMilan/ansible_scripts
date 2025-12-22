@@ -1,0 +1,60 @@
+---
+
+- name: Setup HA and Nginx Reloader
+  hosts: nomad_servers
+  become: true
+  tasks: 
+
+    # Part 1. ----- Keepalived
+    - name: Install Keepalived
+      apt:
+        name: keepalived
+        state: present
+        update_cache: yes
+
+    - name: Configure Keepalived
+      template:
+        src: /opt/nomad/keepalived.conf.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify: Restart Keepalived
+
+    - name: Ensure Keepalived is started
+      service:
+        name: keepalived
+        state: started
+        enabled: yes
+
+
+    # Part 2. SYSTEMD RELOADER for NGINX
+    - name: Create Nginx Reload Service
+      copy:
+        dest: /etc/systemd/system/nginx-reload.service
+        content: |
+          [Unit]
+          Description=Reload Nginx Service
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/systemctl reload nginx
+
+    - name: Create Nginx Reload Path Watcher
+      copy:
+        dest: /etc/systemd/system/nginx-reload.path
+        content: |
+          [Unit]
+          Description=Watch for Nomad Nginx Config Changes
+          [Path]
+          PathChanged=/etc/nginx/conf.d/nomad_apps.conf
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and Start Path Watcher
+      systemd:
+        name: nginx-reload.path
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Keepalived
+      service:
+        name: keepalived
+        state: restarted
