@@ -50,13 +50,35 @@
       notify: Restart Consul
 
     # 5. KOnfiguracija Nomada
-    - name: Postavi Nomad konfiguraciju
+    
+    # Prvo se brisu stari Nomad.hcl fajlovi
+    - name: Remove old nomad.hcl file (if exists)
+      file:
+        path: /etc/nomad.d/nomad.hcl
+        state: absent
+      notify: Restart Nomad
+
+    - name: Postavi Nomad BASE konfiguraciju
       template:
-        src: /opt/nomad/nomad.hcl.j2
-        dest: /etc/nomad.d/nomad.hcl
+        src: /opt/nomad/base.hcl.j2
+        dest: /etc/nomad.d/base.hcl
         mode: '0644'
       notify: Restart Nomad
 
+    - name: Postavi Nomad SERVER konfiguraciju
+      template:
+        src: /opt/nomad/server.hcl.j2
+        dest: /etc/nomad.d/server.hcl
+        mode: '0644'
+      notify: Restart Nomad
+
+    - name: Postavi Nomad CLIENT konfiguraciju
+      template:
+        src: /opt/nomad/client.hcl.j2
+        dest: /etc/nomad.d/client.hcl
+        mode: '0644'
+      notify: Restart Nomad
+      
     # 6. Pokretanje servisa
     - name: Osiguraj da je Consul pokrenut i enable-ovan
       service:
