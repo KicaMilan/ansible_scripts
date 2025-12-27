@@ -1,0 +1,14 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ ansible_default_ipv4.interface }}:
+      dhcp4: no
+      dhcp6: no
+      addresses:
+        - {{ ansible_host }}/{{ netplan_mask }}
+      routes:
+        - to: default
+          via: {{ netplan_gateway }}
+      nameservers:
+        addresses: [{{ netplan_dns }}]

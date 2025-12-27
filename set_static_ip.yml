@@ -1,0 +1,45 @@
+---
+- name: Konfiguracija statičkih IP adresa na Ubuntu 22.04
+  hosts: nomad_servers
+  become: true
+  vars:
+    netplan_config_file: /etc/netplan/99-static-ip.yaml
+
+  tasks:
+    - name: Prikupljanje cinjenica o mrezi (kako bismo nasli interfejs)
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - '!min'
+          - 'network'
+
+    - name: Provera da li su definisane potrebne varijable
+      ansible.builtin.assert:
+        that:
+          - netplan_gateway is defined
+          - netplan_mask is defined
+        fail_msg: "Molim vas definisite 'netplan_gateway' i 'netplan_mask' u inventory fajlu."
+
+    - name: Kreiranje Netplan konfiguracije iz templejta
+      ansible.builtin.template:
+        src: netplan_static.j2
+        dest: "{{ netplan_config_file }}"
+        owner: root
+        group: root
+        mode: '0600'
+      register: netplan_change
+
+    # Opcionalno: Uklanjanje default installer config-a da ne bi pravio konflikt
+    - name: Onemogucavanje default cloud-init/installer netplan fajla (backup)
+      ansible.builtin.shell:
+        cmd: mv /etc/netplan/00-installer-config.yaml /etc/netplan/00-installer-config.yaml.bak
+      args:
+        removes: /etc/netplan/00-installer-config.yaml
+      ignore_errors: yes
+
+    - name: Primena Netplan konfiguracije
+      ansible.builtin.shell: netplan apply
+      when: netplan_change.changed
+      async: 10
+      poll: 0
+      # Koristimo async jer promena mreze moze kratkotrajno prekinuti SSH vezu
